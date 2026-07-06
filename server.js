@@ -54,7 +54,8 @@ const server = http.createServer((req, res) => {
     }
 });
 
-// ポート3000番で待ち受け開始！
-server.listen(3000, () => {
-    console.log('🎮 マイクラ風マルチサーバーがポート3000で起動しました！');
+// ネット上のサーバーが指定するポート（なければ3000番）で待ち受け開始！
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`🎮 マイクラ風マルチサーバーがポート ${PORT} で起動しました！`);
 });
