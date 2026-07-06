@@ -1,0 +1,216 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    user-select: none;
+}
+
+body, html {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: #000;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* 🎮 Three.js のゲーム画面（一番奥にする） */
+canvas {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1; /* 奥側に配置 */
+}
+
+/* 🏠 ホーム画面 */
+.ui-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #1a1c1e 0%, #0d0e10 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 200; /* 一番手前 */
+}
+
+.menu-box {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 40px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    text-align: center;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    max-width: 400px;
+    width: 90%;
+}
+
+.menu-box h1 {
+    color: #fff;
+    font-size: 28px;
+    letter-spacing: 4px;
+    margin-bottom: 30px;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+}
+
+.settings-group {
+    margin-bottom: 25px;
+    text-align: left;
+}
+
+.settings-group label {
+    color: #8a8f98;
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.settings-group select {
+    width: 100%;
+    padding: 12px;
+    background: #252830;
+    border: 1px solid #3b3f4a;
+    color: #fff;
+    border-radius: 8px;
+    font-size: 16px;
+    outline: none;
+}
+
+#start-btn {
+    width: 100%;
+    padding: 14px;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+#start-btn:hover {
+    background: #2563eb;
+}
+
+/* 🎯 PC用の十字照準 */
+.reticle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 16px;
+    height: 16px;
+    pointer-events: none;
+    z-index: 100;
+}
+.reticle::before, .reticle::after {
+    content: '';
+    position: absolute;
+    background: white;
+    mix-blend-mode: difference;
+}
+.reticle::before { top: 7px; left: 0; width: 16px; height: 2px; }
+.reticle::after { top: 0; left: 7px; width: 2px; height: 16px; }
+
+/* 📱 モバイル操作UI */
+#mobile-ui {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 100; /* 手前に表示 */
+}
+
+#joystick-zone {
+    position: absolute;
+    bottom: 40px;
+    left: 40px;
+    width: 100px;
+    height: 100px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    pointer-events: auto;
+}
+
+#joystick-stick {
+    position: absolute;
+    top: 30px;
+    left: 30px;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 50%;
+}
+
+.mobile-buttons {
+    position: absolute;
+    bottom: 40px;
+    right: 40px;
+    display: flex;
+    gap: 15px;
+    pointer-events: auto;
+}
+
+.action-btn {
+    width: 65px;
+    height: 65px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    color: white;
+    border-radius: 50%;
+    font-size: 14px;
+    font-weight: bold;
+    outline: none;
+}
+
+.action-btn:active {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* 🎒 インベントリ（ホットバー） */
+#hotbar {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(40, 40, 40, 0.85);
+    border: 4px solid #1c1c1c;
+    display: flex;
+    padding: 4px;
+    gap: 6px;
+    z-index: 150; /* ボタンよりさらに手前に！ */
+    pointer-events: auto;
+}
+
+.slot {
+    width: 54px;
+    height: 54px;
+    background: rgba(140, 140, 140, 0.5);
+    border: 3px solid #4a4a4a;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+.slot img {
+    width: 42px;
+    height: 42px;
+    object-fit: contain;
+    image-rendering: pixelated;
+}
+
+.slot.active {
+    border: 3px solid #ffffff;
+    background: rgba(200, 200, 200, 0.6);
+    box-shadow: inset 0 0 8px rgba(255,255,255,0.8);
+}
