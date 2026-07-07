@@ -1,262 +1,156 @@
 class Player {
-    constructor(camera, domElement, world, mode) {
+    constructor(camera, domElement, world, mode = 'pc') {
         this.camera = camera;
         this.domElement = domElement;
         this.world = world;
-        this.mode = mode;
+        this.mode = mode; // 'pc' または 'mobile'
 
-        // 🛠️ 初期位置：山に埋まらないように高さ「30」の空中に設定！
-        this.camera.position.set(16, 30, 16);
-
-        // 物理演算用
-        this.keys = { w: false, a: false, s: false, d: false, ' ': false };
-        this.moveSpeed = 0.12;
+        // 🏃‍♂️ 移動スピードと物理演算の準備
         this.velocity = new THREE.Vector3();
+        this.direction = new THREE.Vector3();
+        this.moveKeys = { forward: false, backward: false, left: false, right: false, jump: false };
 
-        this.GRAVITY = 0.012;
-        this.JUMP_FORCE = 0.22;
-        this.PLAYER_HEIGHT = 1.8;
-        this.PLAYER_RADIUS = 0.3;
-        this.isGrounded = false;
+        // 🕹️ スマホ用：タッチ位置を記憶する変数
+        this.touchStart = { x: 0, y: 0 };
+        this.touchMove = { x: 0, y: 0 };
+        this.isTouching = false;
 
-        // レイキャスト（破壊・設置用）
-        this.raycaster = new THREE.Raycaster();
-        this.pointer = new THREE.Vector2(0, 0);
-
-        // 🎒 インベントリシステム
-        this.inventory = ['grass', 'stone'];
-        this.currentSlot = 0;
-
-        // モバイル操作用
-        this.touchLook = { touchId: null, startX: 0, startY: 0 };
-        this.rotX = 0;
-        this.rotY = 0;
-        this.joystick = { active: false, touchId: null, startX: 0, startY: 0, moveX: 0, moveY: 0 };
-
-        this.initInventoryUi();
+        // 初期位置（地面より少し上）
+        this.camera.position.set(16, 12, 16);
 
         if (this.mode === 'pc') {
+            // =============================================================
+            // 💻 PCモード：マウスとキーボードの設定
+            // =============================================================
             this.controls = new THREE.PointerLockControls(this.camera, this.domElement);
-            this.domElement.addEventListener('click', () => this.controls.lock());
-            this.initPcEvents();
+            
+            // 画面をクリックしたらマウスをロックしてゲーム開始
+            this.domElement.addEventListener('click', () => {
+                this.controls.lock();
+            });
+
+            // キーボードを押したとき
+            window.addEventListener('keydown', (e) => this.onKeyDown(e));
+            // キーボードを離したとき
+            window.addEventListener('keyup', (e) => this.onKeyUp(e));
+
+        } else if (this.mode === 'mobile') {
+            // =============================================================
+            // 📱 スマホモード：画面タッチの設定
+            // =============================================================
+            console.log("📱 Playerクラス：スマホ操作モードで起動しました！");
+            
+            // スマホではマウスロックは使わないので、初期の向きを固定
+            this.camera.rotation.set(0, 0, 0);
+
+            // 画面のどこかを指で触った瞬間（視点移動・移動の開始）
+            window.addEventListener('touchstart', (e) => this.onTouchStart(e), { passive: false });
+            // 指をズルズル動かしている最中
+            window.addEventListener('touchmove', (e) => this.onTouchMove(e), { passive: false });
+            // 指を離した瞬間
+            window.addEventListener('touchend', (e) => this.onTouchEnd(e), { passive: false });
+        }
+    }
+
+    // --- 💻 PC用キーボード処理 ---
+    onKeyDown(e) {
+        if (!this.controls.isLocked) return;
+        switch (e.code) {
+            case 'KeyW': case 'ArrowUp': this.moveKeys.forward = true; break;
+            case 'KeyS': case 'ArrowDown': this.moveKeys.backward = true; break;
+            case 'KeyA': case 'ArrowLeft': this.moveKeys.left = true; break;
+            case 'KeyD': case 'ArrowRight': this.moveKeys.right = true; break;
+            case 'Space': if (this.camera.position.y <= 12) this.velocity.y = 5; break; // 簡易ジャンプ
+        }
+    }
+
+    onKeyUp(e) {
+        switch (e.code) {
+            case 'KeyW': case 'ArrowUp': this.moveKeys.forward = false; break;
+            case 'KeyS': case 'ArrowDown': this.moveKeys.backward = false; break;
+            case 'KeyA': case 'ArrowLeft': this.moveKeys.left = false; break;
+            case 'KeyD': case 'ArrowRight': this.moveKeys.right = false; break;
+        }
+    }
+
+    // --- 📱 スマホ用タッチ処理 ---
+    onTouchStart(e) {
+        this.isTouching = true;
+        const touch = e.touches[0];
+        
+        // タッチが始まった画面のXY座標を覚える
+        this.touchStart.x = touch.clientX;
+        this.touchStart.y = touch.clientY;
+
+        // 画面の左半分を触っていたら「移動ジョイスティック」として扱う
+        if (touch.clientX < window.innerWidth / 2) {
+            // 移動をリセット
+            this.moveKeys.forward = false;
+            this.moveKeys.backward = false;
+        }
+    }
+
+    onTouchMove(e) {
+        if (!this.isTouching) return;
+        const touch = e.touches[0];
+
+        // スタート位置からどれくらい指が動いたかを計算
+        const diffX = touch.clientX - this.touchStart.x;
+        const diffY = touch.clientY - this.touchStart.y;
+
+        if (this.touchStart.x < window.innerWidth / 2) {
+            // 👈 画面の左側：移動（簡易的に、指を上にスライドしたら前進、下にスライドしたら後退）
+            if (diffY < -30) { this.moveKeys.forward = true; this.moveKeys.backward = false; }
+            else if (diffY > 30) { this.moveKeys.backward = true; this.moveKeys.forward = false; }
+            else { this.moveKeys.forward = false; this.moveKeys.backward = false; }
         } else {
-            this.initMobileEvents();
+            // 👉 画面の右側：カメラの視点移動（グリグリ見回す）
+            this.camera.rotation.y -= diffX * 0.005;
+            this.camera.rotation.x -= diffY * 0.005;
+            // 真上や真下を向きすぎないように制限
+            this.camera.rotation.x = Math.max(-Math.PI/3, Math.min(Math.PI/3, this.camera.rotation.x));
+            
+            // 次の計算のために位置を更新
+            this.touchStart.x = touch.clientX;
+            this.touchStart.y = touch.clientY;
         }
     }
 
-    initInventoryUi() {
-        const slots = document.querySelectorAll('.slot');
-        slots.forEach(slot => {
-            const handleSwitch = (e) => {
-                e.stopPropagation();
-                const idx = parseInt(slot.getAttribute('data-index'));
-                this.changeSlot(idx);
-            };
-            slot.addEventListener('click', handleSwitch);
-            slot.addEventListener('touchstart', handleSwitch, { passive: false });
-        });
+    onTouchEnd(e) {
+        this.isTouching = false;
+        // 指を離したら移動をすべてストップ
+        this.moveKeys.forward = false;
+        this.moveKeys.backward = false;
+        this.moveKeys.left = false;
+        this.moveKeys.right = false;
     }
 
-    changeSlot(index) {
-        this.currentSlot = index;
-        document.querySelectorAll('.slot').forEach((slot, i) => {
-            if (i === index) slot.classList.add('active');
-            else slot.classList.remove('active');
-        });
-    }
-
-    initPcEvents() {
-        window.addEventListener('keydown', (e) => {
-            if (e.key === '1') this.changeSlot(0);
-            if (e.key === '2') this.changeSlot(1);
-            const key = e.key === ' ' ? ' ' : e.key.toLowerCase();
-            if (key in this.keys) this.keys[key] = true;
-        });
-        window.addEventListener('keyup', (e) => {
-            const key = e.key === ' ' ? ' ' : e.key.toLowerCase();
-            if (key in this.keys) this.keys[key] = false;
-        });
-        window.addEventListener('mousedown', (e) => {
-            if (!this.controls.isLocked) return;
-            this.executeAction(e.button === 0 ? 'destroy' : 'place');
-        });
-    }
-
-    initMobileEvents() {
-        const joyZone = document.getElementById('joystick-zone');
-        const joyStick = document.getElementById('joystick-stick');
-
-        joyZone.addEventListener('touchstart', (e) => {
-            const touch = e.changedTouches[0];
-            this.joystick.active = true;
-            this.joystick.touchId = touch.identifier;
-            this.joystick.startX = touch.clientX;
-            this.joystick.startY = touch.clientY;
-        });
-
-        window.addEventListener('touchmove', (e) => {
-            if (!this.joystick.active) return;
-            for (let touch of e.changedTouches) {
-                if (touch.identifier === this.joystick.touchId) {
-                    let dx = touch.clientX - this.joystick.startX;
-                    let dy = touch.clientY - this.joystick.startY;
-                    const dist = Math.sqrt(dx*dx + dy*dy);
-                    if (dist > 40) { dx = (dx / dist) * 40; dy = (dy / dist) * 40; }
-                    joyStick.style.transform = `translate(${dx}px, ${dy}px)`;
-                    this.joystick.moveX = dx / 40;
-                    this.joystick.moveY = dy / 40;
-                }
-            }
-        });
-
-        window.addEventListener('touchend', (e) => {
-            for (let touch of e.changedTouches) {
-                if (touch.identifier === this.joystick.touchId) {
-                    this.joystick.active = false;
-                    this.joystick.moveX = 0; this.joystick.moveY = 0;
-                    joyStick.style.transform = 'translate(0px, 0px)';
-                }
-            }
-        });
-
-        this.domElement.addEventListener('touchstart', (e) => {
-            for (let touch of e.changedTouches) {
-                if (touch.clientY < window.innerHeight - 120) {
-                    if (this.touchLook.touchId === null) {
-                        this.touchLook.touchId = touch.identifier;
-                        this.touchLook.startX = touch.clientX;
-                        this.touchLook.startY = touch.clientY;
-                    }
-                }
-            }
-        });
-
-        this.domElement.addEventListener('touchmove', (e) => {
-            if (this.touchLook.touchId === null) return;
-            for (let touch of e.changedTouches) {
-                if (touch.identifier === this.touchLook.touchId) {
-                    const dx = touch.clientX - this.touchLook.startX;
-                    const dy = touch.clientY - this.touchLook.startY;
-                    this.rotY -= dx * 0.005;
-                    this.rotX -= dy * 0.005;
-                    this.rotX = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, this.rotX));
-                    this.camera.rotation.order = "YXZ";
-                    this.camera.rotation.set(this.rotX, this.rotY, 0);
-                    this.touchLook.startX = touch.clientX;
-                    this.touchLook.startY = touch.clientY;
-                }
-            }
-        });
-
-        this.domElement.addEventListener('touchend', (e) => {
-            for (let touch of e.changedTouches) {
-                if (touch.identifier === this.touchLook.touchId) this.touchLook.touchId = null;
-            }
-        });
-
-        document.getElementById('btn-destroy').addEventListener('touchstart', (e) => { e.preventDefault(); this.executeAction('destroy'); });
-        document.getElementById('btn-place').addEventListener('touchstart', (e) => { e.preventDefault(); this.executeAction('place'); });
-        document.getElementById('btn-jump').addEventListener('touchstart', (e) => { e.preventDefault(); if (this.isGrounded) this.velocity.y = this.JUMP_FORCE; });
-    }
-
-    executeAction(actionType) {
-        this.raycaster.setFromCamera(this.pointer, this.camera);
-        const intersects = this.raycaster.intersectObjects(this.world.blocks);
-        if (intersects.length > 0) {
-            const hit = intersects[0];
-            if (hit.distance > 5) return;
-            if (actionType === 'destroy') {
-                this.world.removeBlock(hit.object);
-            } else {
-                const normal = hit.face.normal;
-                const targetPos = hit.object.position.clone().add(normal);
-                const blockType = this.inventory[this.currentSlot];
-                this.world.createBlock(targetPos.x, targetPos.y, targetPos.z, (normal.y === 1), blockType);
-            }
-        }
-    }
-
-    checkCollision(x, y, z) {
-        const px = Math.floor(x + 0.5);
-        const py = Math.floor(y + 0.5);
-        const pz = Math.floor(z + 0.5);
-        for (let i = 0; i < this.world.blocks.length; i++) {
-            const b = this.world.blocks[i].position;
-            if (Math.floor(b.x + 0.5) === px && Math.floor(b.y + 0.5) === py && Math.floor(b.z + 0.5) === pz) return true;
-        }
-        return false;
-    }
-
+    // --- 🔄 毎フレーム動く位置更新（PC・スマホ共通） ---
     update() {
-        if (!this.isGrounded) this.velocity.y -= this.GRAVITY;
+        const speed = 0.1; // 歩く速度
 
-        if (this.mode === 'pc' && this.isGrounded && this.keys[' ']) {
-            this.velocity.y = this.JUMP_FORCE;
-            this.isGrounded = false;
-        } 
+        // 前後左右の移動ベクトルを計算
+        this.direction.z = Number(this.moveKeys.forward) - Number(this.moveKeys.backward);
+        this.direction.x = Number(this.moveKeys.right) - Number(this.moveKeys.left);
+        this.direction.normalize();
 
-        const moveVector = new THREE.Vector3();
-        if (this.mode === 'pc') {
-            if (this.keys.w) moveVector.z -= this.moveSpeed;
-            if (this.keys.s) moveVector.z += this.moveSpeed;
-            if (this.keys.a) moveVector.x -= this.moveSpeed;
-            if (this.keys.d) moveVector.x += this.moveSpeed;
+        // カメラの向きに合わせて進む方向を決める
+        const camDirection = new THREE.Vector3();
+        this.camera.getWorldDirection(camDirection);
+        camDirection.y = 0; // 上下には飛ばないように固定
+        camDirection.normalize();
+
+        // 前後移動
+        if (this.moveKeys.forward) this.camera.position.addScaledVector(camDirection, speed);
+        if (this.moveKeys.backward) this.camera.position.addScaledVector(camDirection, -speed);
+
+        // 簡易的な重力演算（地面 Y=10 より下に落ちないようにする）
+        if (this.camera.position.y > 10.5) {
+            this.velocity.y -= 0.2; // 重力
         } else {
-            moveVector.x = this.joystick.moveX * this.moveSpeed;
-            moveVector.z = this.joystick.moveY * this.moveSpeed;
-        }
-
-        const camQuaternion = this.camera.quaternion.clone();
-        camQuaternion.x = 0; camQuaternion.z = 0; camQuaternion.normalize();
-        moveVector.applyQuaternion(camQuaternion);
-
-        // X軸衝突判定
-        this.camera.position.x += moveVector.x;
-        if (
-            this.checkCollision(this.camera.position.x + this.PLAYER_RADIUS, this.camera.position.y - 0.5, this.camera.position.z) ||
-            this.checkCollision(this.camera.position.x - this.PLAYER_RADIUS, this.camera.position.y - 0.5, this.camera.position.z) ||
-            this.checkCollision(this.camera.position.x + this.PLAYER_RADIUS, this.camera.position.y - 1.2, this.camera.position.z) ||
-            this.checkCollision(this.camera.position.x - this.PLAYER_RADIUS, this.camera.position.y - 1.2, this.camera.position.z)
-        ) {
-            this.camera.position.x -= moveVector.x;
-        }
-
-        // Z軸衝突判定
-        this.camera.position.z += moveVector.z;
-        if (
-            this.checkCollision(this.camera.position.x, this.camera.position.y - 0.5, this.camera.position.z + this.PLAYER_RADIUS) ||
-            this.checkCollision(this.camera.position.x, this.camera.position.y - 0.5, this.camera.position.z - this.PLAYER_RADIUS) ||
-            this.checkCollision(this.camera.position.x, this.camera.position.y - 1.2, this.camera.position.z + this.PLAYER_RADIUS) ||
-            this.checkCollision(this.camera.position.x, this.camera.position.y - 1.2, this.camera.position.z - this.PLAYER_RADIUS)
-        ) {
-            this.camera.position.z -= moveVector.z;
-        }
-
-        this.camera.position.y += this.velocity.y;
-        if (this.velocity.y > 0 && this.checkCollision(this.camera.position.x, this.camera.position.y + 0.1, this.camera.position.z)) {
             this.velocity.y = 0;
+            this.camera.position.y = 10.5; // 地面に固定
         }
-
-        const playerX = Math.floor(this.camera.position.x + 0.5);
-        const playerZ = Math.floor(this.camera.position.z + 0.5);
-        const feetY = this.camera.position.y - this.PLAYER_HEIGHT;
-
-        let blockBelowY = -1;
-        for (let i = 0; i < this.world.blocks.length; i++) {
-            const b = this.world.blocks[i].position;
-            if (Math.floor(b.x + 0.5) === playerX && Math.floor(b.z + 0.5) === playerZ) {
-                if (b.y <= feetY + 0.35 && b.y > blockBelowY) blockBelowY = b.y;
-            }
-        }
-
-        if (blockBelowY !== -1 && feetY <= blockBelowY + 0.5) {
-            this.camera.position.y = blockBelowY + 0.5 + this.PLAYER_HEIGHT;
-            this.velocity.y = 0;
-            this.isGrounded = true;
-        } else {
-            this.isGrounded = false;
-        }
-
-        if (this.camera.position.y < -10) { this.camera.position.set(16, 30, 16); this.velocity.y = 0; }
+        this.camera.position.y += this.velocity.y * 0.05;
     }
 }
