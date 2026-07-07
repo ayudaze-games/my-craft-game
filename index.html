@@ -2,10 +2,16 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
     <title>My Craft Game</title>
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Arial', sans-serif; background-color: #000; }
+        /* 📱 スマホの画面長押しでの文字選択やメニューポップアップを禁止する */
+        * {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        body { margin: 0; overflow: hidden; font-family: 'Arial', sans-serif; background-color: #000; touch-action: none; }
         canvas { display: block; }
 
         /* 🌳 メニュー画面全体のスタイル */
@@ -13,7 +19,7 @@
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('img/grass_top.png');
-            background-size: 64px; /* マイクラ風ドット背景 */
+            background-size: 64px;
             background-repeat: repeat;
             image-rendering: pixelated;
             display: flex;
@@ -32,7 +38,7 @@
             letter-spacing: 2px;
         }
 
-        /* ⚙️ 設定エリア（PC/スマホ切り替え） */
+        /* ⚙️ 設定エリア */
         .settings-box {
             background: rgba(0, 0, 0, 0.6);
             padding: 15px 30px;
@@ -62,7 +68,7 @@
             box-shadow: 0 5px #222;
         }
         .menu-btn:hover {
-            background-color: #5c8e32; /* ホバー時はマイクラ草色 */
+            background-color: #5c8e32;
             border-top-color: #bee268;
             border-left-color: #bee268;
             color: #fff;
@@ -72,14 +78,28 @@
             box-shadow: 0 1px #222;
         }
 
-        /* 📱 スマホ用バーチャルパッド（最初は非表示） */
-        #mobile-controls {
+        /* 🕹️ スマホ用：外側の大きな丸（コントローラーの土台） */
+        #mobile-joystick-base {
             display: none;
             position: fixed;
-            bottom: 30px; left: 30px; width: 150px; height: 150px;
-            background: rgba(255,255,255,0.2);
+            bottom: 50px; left: 50px; 
+            width: 100px; height: 100px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 3px solid rgba(255, 255, 255, 0.4);
             border-radius: 50%;
             z-index: 1000;
+            touch-action: none;
+        }
+
+        /* ⚪ スマホ用：内側の動く小さな丸（スティック本体） */
+        #mobile-joystick-knob {
+            position: absolute;
+            top: 25px; left: 25px; /* 真ん中に配置 (100pxの枠に対して50pxの丸なので) */
+            width: 50px; height: 50px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            transition: transform 0.05s linear;
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -100,7 +120,9 @@
         <button class="menu-btn" onclick="startGame('multi')">RenderAyudazeserver (マルチ)</button>
     </div>
 
-    <div id="mobile-controls"></div>
+    <div id="mobile-joystick-base">
+        <div id="mobile-joystick-knob"></div>
+    </div>
 
     <script src="js/world.js"></script>
     <script src="js/player.js"></script>
@@ -108,25 +130,22 @@
     <script src="main.js"></script>
 
     <script>
-        // グローバル変数でモードとデバイスを記憶
         window.gameMode = 'single'; 
         window.isMobileMode = false;
 
         function startGame(mode) {
             window.gameMode = mode;
             
-            // スマホモードが選ばれているかチェック
             const selectedDevice = document.querySelector('input[name="device"]:checked').value;
             if (selectedDevice === 'mobile') {
                 window.isMobileMode = true;
-                document.getElementById('mobile-controls').style.display = 'block';
+                // スマホモードの時だけ丸いカーソルを表示する！
+                document.getElementById('mobile-joystick-base').style.display = 'block';
             }
 
-            // メニュー画面を非表示にする
             document.getElementById('menu-container').style.display = 'none';
             console.log(`🎮 モード: ${window.gameMode} / デバイス: ${selectedDevice} で起動完了！`);
             
-            // 🚀 game.js で包んだ初期化関数をここで呼び出す！
             if (typeof window.initGame === 'function') {
                 window.initGame();
             }
