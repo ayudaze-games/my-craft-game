@@ -72,7 +72,7 @@
             box-shadow: 0 1px #222;
         }
 
-        /* 📱 スマホ用バーチャルパッド（今は非表示、スマホモードONでゲーム開始時に出す用） */
+        /* 📱 スマホ用バーチャルパッド（最初は非表示） */
         #mobile-controls {
             display: none;
             position: fixed;
@@ -102,8 +102,12 @@
     <div id="mobile-controls"></div>
 
     <script src="js/world.js"></script>
+    <script src="js/player.js"></script>
+    <script src="game.js"></script>
+    <script src="main.js"></script>
+
     <script>
-        // 全局変数としてモードを記憶
+        // グローバル変数でモードとデバイスを記憶
         window.gameMode = 'single'; 
         window.isMobileMode = false;
 
@@ -115,14 +119,12 @@
             if (selectedDevice === 'mobile') {
                 window.isMobileMode = true;
                 document.getElementById('mobile-controls').style.display = 'block';
-                alert('📱スマホモード（開発中）：画面左下をタッチして動かせるようにします！');
+                alert('📱スマホモード：画面のタッチ移動を有効化します（この後プログラムを追加します）');
             }
 
-            // メニュー画面を消してゲーム開始！
+            // メニュー画面を非表示にしてゲームの世界を表示！
             document.getElementById('menu-container').style.display = 'none';
-            console.log(`🎮 モード: ${window.gameMode} / デバイス: ${selectedDevice} で起動しました！`);
-            
-            // もし main.js 側で「ボタンを押してから初期化」したい場合は、ここに init() などを呼び出します
+            console.log(`🎮 モード: ${window.gameMode} / デバイス: ${selectedDevice} で起動完了！`);
         }
     </script>
 </body>
