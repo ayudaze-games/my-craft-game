@@ -83,6 +83,7 @@
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
 </head>
 <body>
 
@@ -111,7 +112,7 @@
         window.gameMode = 'single'; 
         window.isMobileMode = false;
 
-function startGame(mode) {
+        function startGame(mode) {
             window.gameMode = mode;
             
             // スマホモードが選ばれているかチェック
@@ -125,8 +126,11 @@ function startGame(mode) {
             document.getElementById('menu-container').style.display = 'none';
             console.log(`🎮 モード: ${window.gameMode} / デバイス: ${selectedDevice} で起動完了！`);
             
-            // 🚀 【ここが重要！】さっき包んだゲーム起動関数をここでドカンと呼び出す！
+            // 🚀 game.js で包んだ初期化関数をここで呼び出す！
             if (typeof window.initGame === 'function') {
                 window.initGame();
             }
         }
+    </script>
+</body>
+</html>
