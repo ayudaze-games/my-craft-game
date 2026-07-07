@@ -111,7 +111,7 @@
         window.gameMode = 'single'; 
         window.isMobileMode = false;
 
-        function startGame(mode) {
+function startGame(mode) {
             window.gameMode = mode;
             
             // スマホモードが選ばれているかチェック
@@ -119,14 +119,14 @@
             if (selectedDevice === 'mobile') {
                 window.isMobileMode = true;
                 document.getElementById('mobile-controls').style.display = 'block';
-                alert('📱スマホモード：画面のタッチ移動を有効化します（この後プログラムを追加します）');
             }
 
-            // メニュー画面を非表示にしてゲームの世界を表示！
+            // メニュー画面を非表示にする
             document.getElementById('menu-container').style.display = 'none';
             console.log(`🎮 モード: ${window.gameMode} / デバイス: ${selectedDevice} で起動完了！`);
+            
+            // 🚀 【ここが重要！】さっき包んだゲーム起動関数をここでドカンと呼び出す！
+            if (typeof window.initGame === 'function') {
+                window.initGame();
+            }
         }
-    </script>
-</body>
-</html>
-//更新用コメント
