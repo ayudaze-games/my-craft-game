@@ -7,7 +7,7 @@ let otherPlayersMesh = {};
 // 🌐 サーバーに自分の位置を送り、全員のデータを貰ってくる関数
 async function sendPositionToServer(x, y, z, ry) {
     try {
-        const response = await fetch('http://localhost:3000/update', {
+        const response = await fetch('https://my-craft-game.onrender.com/update', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: myId, x: x, y: y, z: z, ry: ry })
