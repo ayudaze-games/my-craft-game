@@ -11,8 +11,8 @@ class Player {
         this.moveKeys = { forward: false, backward: false, left: false, right: false };
 
 // 🍏 物理演算パラメーター（ここをお好みで調整！）
-        this.gravity = 0.3;        // 👈 【重力】少し重くする（標準は 0.2 だったのを 0.3 に）
-        this.jumpStrength = 4.5;   // 👈 【ジャンプ力】これくらいがマイクラ風の心地いい高さ！（6.0 から 4.5 へ）
+        this.gravity = 0.5;        // 👈 【重力】少し重くする（標準は 0.2 だったのを 0.3 に）
+        this.jumpStrength = 1.2;   // 👈 【ジャンプ力】これくらいがマイクラ風の心地いい高さ！（6.0 から 4.5 へ）
         this.floorY = 10.5;
         this.playerHeight = 1.6; // プレイヤーの目の高さ（マイクラ基準）
 
