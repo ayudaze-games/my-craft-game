@@ -30,7 +30,7 @@ window.initGame = function() {
         window.worldInstance = new World(window.scene);
     }
 
-    // 動いた位置に合わせてチャンクを更新
+    // 初期起動時に、スポーン地点（16, 16）の周りのチャンクを最初にガチッと生成しておく
     if (window.worldInstance) {
         window.worldInstance.updateChunks(16, 16);
     }
@@ -41,6 +41,10 @@ window.initGame = function() {
         window.playerInstance = new Player(window.camera, window.renderer.domElement, window.worldInstance, controlMode);
     }
 
+    // 前回のチャンク位置を記憶する変数（暴走防止用）
+    window.lastChunkX = Math.floor(window.camera.position.x / 16);
+    window.lastChunkZ = Math.floor(window.camera.position.z / 16);
+
     // 🚀 ループをスタート！
     tick();
 };
@@ -50,12 +54,21 @@ window.initGame = function() {
 // =================================================================
 function tick() {
     if (window.playerInstance) {
-        // 🏃‍♂️ キーボード移動、ジャンプ、物理演算を動かす！
+        // 🏃‍♂️ プレイヤーの移動、物理演算、ジャンプを最優先で滑らかに動かす！
         window.playerInstance.update();
 
-        // 動いた位置に合わせてチャンクを自動更新
+        // 🛠️ 【暴走バグ修正！】毎フレーム生成するのをやめ、別のチャンクにまたいだ瞬間だけ更新する
         if (window.worldInstance) {
-            window.worldInstance.updateChunks(window.camera.position.x, window.camera.position.z);
+            const currentChunkX = Math.floor(window.camera.position.x / 16);
+            const currentChunkZ = Math.floor(window.camera.position.z / 16);
+
+            // プレイヤーが16マス動いて、新しいチャンクの境界を越えた時だけ土地をロード
+            if (currentChunkX !== window.lastChunkX || currentChunkZ !== window.lastChunkZ) {
+                window.worldInstance.updateChunks(window.camera.position.x, window.camera.position.z);
+                window.lastChunkX = currentChunkX;
+                window.lastChunkZ = currentChunkZ;
+                console.log("🗺️ 新しいチャンクを読み込みました");
+            }
         }
 
         // 🌐 【通信報告】「マルチプレイ」モードの時だけ、サーバーに座標を送る！
