@@ -25,8 +25,6 @@ class World {
         // =================================================================
         // 📦 2. 各ブロックのマテリアル（見た目）作成
         // =================================================================
-        // ① 草ブロック（サイコロの面ごとに画像を貼り分けます）
-        // Three.jsの並び順：[右, 左, 上, 下, 前, 後]
         this.grassMaterials = [
             new THREE.MeshStandardMaterial({ map: textureGrassSide }), // 右
             new THREE.MeshStandardMaterial({ map: textureGrassSide }), // 左
@@ -36,14 +34,21 @@ class World {
             new THREE.MeshStandardMaterial({ map: textureGrassSide })  // 後
         ];
 
-        // ② 土ブロック（全面が土）
         this.dirtMaterial = new THREE.MeshStandardMaterial({ map: textureDirt });
-
-        // ③ 石ブロック（全面が石）
         this.stoneMaterial = new THREE.MeshStandardMaterial({ map: textureStone });
 
-        // ブロックの形（共通の1x1x1のサイコロ型）
         this.geometry = new THREE.BoxGeometry(1, 1, 1);
+    }
+
+    // 🧱 【超重要！】指定したXYZ座標にブロックがあるか調べる関数
+    // これがなかったせいでプレイヤーが空中浮遊したりすり抜けていました！
+    getBlock(x, y, z) {
+        // 配置されている全てのブロックから、座標が一致するものを探す
+        return this.blocks.find(block => 
+            Math.floor(block.position.x) === Math.floor(x) &&
+            Math.floor(block.position.y) === Math.floor(y) &&
+            Math.floor(block.position.z) === Math.floor(z)
+        );
     }
 
     // ブロックを新しく生み出す関数
@@ -108,13 +113,10 @@ class World {
                 // 表面から地中深くまでブロックを積み上げる
                 for (let y = 0; y <= height; y++) {
                     if (y === height) {
-                        // 1層目（一番表面）：草ブロック
                         this.createBlock(worldX, y, worldZ, true, 'grass');
                     } else if (y >= height - 5) {
-                        // 2層目〜6層目（表面のすぐ下5マス分）：土ブロック
                         this.createBlock(worldX, y, worldZ, false, 'dirt');
                     } else {
-                        // 7層目より深い場所：石ブロック
                         this.createBlock(worldX, y, worldZ, false, 'stone');
                     }
                 }
