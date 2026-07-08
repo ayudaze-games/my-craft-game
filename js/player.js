@@ -5,15 +5,15 @@ class Player {
         this.world = world;
         this.mode = mode;
 
-        // 🏃‍♂️ 移動スピードと物理演算（y軸の速度でジャンプを制御します）
+        // 🏃‍♂️ 移動スピードと物理演算
         this.velocity = new THREE.Vector3();
         this.direction = new THREE.Vector3();
-        this.moveKeys = { forward: false, backward: false, left: false, right: false, jump: false };
+        this.moveKeys = { forward: false, backward: false, left: false, right: false };
 
-        // 重力定数とジャンプ力
-        this.gravity = 0.25; 
-        this.jumpStrength = 4.5;
-        this.floorY = 10.5; // 地面の高さ
+        // 🍏 物理演算のパラメーター調整（ジャンプ力大幅アップ！）
+        this.gravity = 0.2; 
+        this.jumpStrength = 6.0; // 🚀 パワーを4.5から6.0へ超強化！
+        this.floorY = 10.5;      // 地面の高さ
 
         // 🕹️ スマホ用変数
         this.joystickActive = false;
@@ -22,8 +22,9 @@ class Player {
         this.lookStart = { x: 0, y: 0 };
         this.isLooking = false;
 
-        // 初期位置の設定
-        this.camera.position.set(16, this.floorY, 16);
+        // 🛠️ 【埋まり対策！】初期スポーン位置を Y=15 の空中へ引っ越し！
+        // これでゲーム開始時に上からストンと綺麗に着地します
+        this.camera.position.set(16, 15, 16);
 
         this.knob = document.getElementById('mobile-joystick-knob');
         this.base = document.getElementById('mobile-joystick-base');
@@ -49,21 +50,23 @@ class Player {
             window.addEventListener('touchmove', (e) => this.onTouchMove(e), { passive: false });
             window.addEventListener('touchend', (e) => this.onTouchEnd(e), { passive: false });
 
-            // 🦘 スマホのJUMPボタンを触った瞬間の処理を登録！
+            // 🦘 スマホJUMPボタン
             if (this.jumpBtn) {
                 this.jumpBtn.addEventListener('touchstart', (e) => {
-                    e.stopPropagation(); // 視点移動がバグるのを防ぐ
+                    e.preventDefault();
+                    e.stopPropagation();
                     this.triggerJump();
                 }, { passive: false });
             }
         }
     }
 
-    // --- ジャンプの共通スイッチ ---
+    // --- ジャンプのスイッチ ---
     triggerJump() {
-        // 地面にぴったりついている時だけジャンプできる（空中ジャンプ禁止）
-        if (this.camera.position.y <= this.floorY + 0.01) {
-            this.velocity.y = this.jumpStrength; // 上向きの力をドカンと与える！
+        // 地面にほぼ着地している状態（猶予を持たせるために+0.1）ならジャンプ可能
+        if (this.camera.position.y <= this.floorY + 0.1) {
+            this.velocity.y = this.jumpStrength; // 上向きの速度を与える
+            console.log("🦘 ジャンプ発動！速度:", this.velocity.y);
         }
     }
 
@@ -75,7 +78,7 @@ class Player {
             case 'KeyS': case 'ArrowDown': this.moveKeys.backward = true; break;
             case 'KeyA': case 'ArrowLeft': this.moveKeys.left = true; break;
             case 'KeyD': case 'ArrowRight': this.moveKeys.right = true; break;
-            case 'Space': this.triggerJump(); break; // 🦘 Spaceキーでジャンプ発動！
+            case 'Space': this.triggerJump(); break; // 🦘 Spaceキー
         }
     }
     onKeyUp(e) {
@@ -92,7 +95,6 @@ class Player {
         for (let i = 0; i < e.changedTouches.length; i++) {
             const touch = e.changedTouches[i];
 
-            // ジャンプボタンそのものを触っている場合は、視点移動や移動ジョイスティックの判定をスキップ
             if (e.target === this.jumpBtn) return;
 
             if (touch.clientX < window.innerWidth / 2 && !this.joystickActive) {
@@ -189,15 +191,14 @@ class Player {
         if (this.moveKeys.left)     this.camera.position.addScaledVector(rightVec, -speed);
         if (this.moveKeys.right)    this.camera.position.addScaledVector(rightVec, speed);
 
-        // 🍏 【リアル重力シミュレーション】
-        // 常に下向きに引っ張る力を加え続ける
+        // 🍏 重力の計算（フレームごとの処理に調整）
         this.velocity.y -= this.gravity; 
-        this.camera.position.y += this.velocity.y * 0.1; // 速度に合わせて実際にキャラを上下させる
+        this.camera.position.y += this.velocity.y * 0.1;
 
         // 地面（floorY）に着地したときのストッパー
         if (this.camera.position.y <= this.floorY) {
-            this.velocity.y = 0; // 落下速度をリセット
-            this.camera.position.y = this.floorY; // 地面に固定
+            this.velocity.y = 0; 
+            this.camera.position.y = this.floorY; 
         }
     }
 }
