@@ -10,10 +10,10 @@ class Player {
         this.direction = new THREE.Vector3();
         this.moveKeys = { forward: false, backward: false, left: false, right: false };
 
-        // 🍏 物理演算パラメーター（快適なジャンプと重力）
+        // 🍏 物理演算パラメーター（ジャンプ力と重力を快適に調整）
         this.gravity = 0.3;        
         this.jumpStrength = 4.5;   
-        this.floorY = 2.0;         // 世界のどん底（これ以上は絶対に落ちない奈落の底）
+        this.floorY = 2.0;         // 世界のどん底
         this.playerHeight = 1.6;   // プレイヤーの目の高さ（マイクラ基準）
 
         // 🕹️ スマホ用変数
@@ -64,10 +64,9 @@ class Player {
 
     // --- ジャンプの発動 ---
     triggerJump() {
-        // 本当にブロックの上に立っている時だけジャンプを許可
         if (this.onGround) {
             this.velocity.y = this.jumpStrength; // 上向きの速度を与える
-            this.onGround = false; // ジャンプした瞬間は空中へ
+            this.onGround = false; 
             console.log("🦘 ジャンプしました！");
         }
     }
@@ -166,31 +165,32 @@ class Player {
         this.velocity.y -= this.gravity; 
         this.camera.position.y += this.velocity.y * 0.1;
 
-        // 🧱 2. 【大改造！動的スキャン式当たり判定】
+        // 🧱 2. 【改善版：ピンポイント足元当たり判定】
         // プレイヤーの今の足元のXZ座標（整数）を計算
         const playerX = Math.floor(this.camera.position.x);
         const playerZ = Math.floor(this.camera.position.z);
+        // プレイヤーの現在の「足元の高さ」を計算（目の高さから身長を引いた位置）
+        const currentFeetY = this.camera.position.y - this.playerHeight;
         
-        let highestBlockY = this.floorY; // 初期値は奈落の底（2.0）
+        let targetFloorY = this.floorY; // 初期値は世界のどん底
 
-        // プレイヤーの足元の下（高さ20から0に向かって）にあるブロックを上から順番に探す！
         if (this.world && typeof this.world.getBlock === 'function') {
-            for (let y = 20; y >= 0; y--) {
+            // 無制限スキャンをやめて、現在の足元の高さ周辺（現在の高さ+1〜下に向けて）だけを調べる
+            const startScanY = Math.min(20, Math.floor(currentFeetY) + 1);
+            for (let y = startScanY; y >= 0; y--) {
                 const block = this.world.getBlock(playerX, y, playerZ);
-                // ブロックが存在していて、かつ壊されて消えていない（visible !== false）場合
                 if (block && block.visible !== false) {
-                    highestBlockY = y + 1.0; // そのブロックの「頭の上（高さ+1.0）」を着地目標にする！
-                    break; // 一番上のブロックが見つかったのでループを終了
+                    targetFloorY = y + 1.0; // ブロックの頭の上
+                    break;
                 }
             }
         }
 
-        // 🍏 3. 着地判定
-        // プレイヤーの足元（カメラ位置 - 身長）が、見つかった一番上のブロックより下に行こうとしたらガチッと止める
-        if (this.camera.position.y - this.playerHeight <= highestBlockY) {
-            this.camera.position.y = highestBlockY + this.playerHeight; // ブロックの上の正しい位置にピタッと固定！
+        // 🍏 3. 着地判定と位置固定
+        if (currentFeetY <= targetFloorY) {
+            this.camera.position.y = targetFloorY + this.playerHeight; // 地面の上の正しい位置にピタッと固定！
             this.velocity.y = 0; // 落下の力をリセット
-            this.onGround = true; // 地面に立っているのでジャンプを許可！
+            this.onGround = true; // ジャンプ許可！
         } else {
             this.onGround = false; // 空中にいる
         }
