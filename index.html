@@ -2,179 +2,259 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>My Craft Game</title>
     <style>
-        * {
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #78a7ff;
             user-select: none;
+            -webkit-user-select: none;
         }
-        body { margin: 0; overflow: hidden; font-family: 'Arial', sans-serif; background-color: #000; touch-action: none; }
-        canvas { display: block; }
+        canvas {
+            display: block;
+        }
 
-        /* 🌳 メニュー画面全体のスタイル */
+        /* 🚪 タイトルメニューの画面 */
         #menu-container {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('img/grass_top.png');
-            background-size: 64px;
-            background-repeat: repeat;
-            image-rendering: pixelated;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(16, 16, 16, 0.85);
             display: flex;
             flex-direction: column;
-            align-items: center;
             justify-content: center;
-            z-index: 9999;
+            align-items: center;
+            z-index: 100;
+            font-family: 'Arial', sans-serif;
         }
 
-        /* 🎮 タイトル文字 */
         h1 {
             color: #fff;
-            font-size: 3rem;
-            text-shadow: 4px 4px #222;
-            margin-bottom: 40px;
+            text-shadow: 3px 3px 0px #3f3f3f;
+            font-size: 42px;
+            margin-bottom: 30px;
             letter-spacing: 2px;
         }
 
-        /* ⚙️ 設定エリア */
-        .settings-box {
-            background: rgba(0, 0, 0, 0.6);
-            padding: 15px 30px;
-            border-radius: 8px;
-            border: 2px solid #555;
-            margin-bottom: 30px;
-            color: #fff;
-            text-align: center;
-        }
-        .settings-box label { font-size: 1.1rem; margin-right: 15px; cursor: pointer; }
-        .settings-box input { transform: scale(1.3); margin-right: 5px; cursor: pointer; }
-
-        /* 🔘 ボタンの共通スタイル */
         .menu-btn {
-            width: 320px;
-            padding: 15px;
+            width: 280px;
+            padding: 14px;
             margin: 10px;
-            font-size: 1.3rem;
+            font-size: 18px;
             font-weight: bold;
-            color: #e0e0e0;
-            background-color: #4a4a4a;
-            border: 3px solid #000;
-            border-top-color: #8b8b8b;
-            border-left-color: #8b8b8b;
             cursor: pointer;
-            text-shadow: 2px 2px #000;
-            box-shadow: 0 5px #222;
-        }
-        .menu-btn:hover {
-            background-color: #5c8e32;
-            border-top-color: #bee268;
-            border-left-color: #bee268;
-            color: #fff;
+            background: #5c801e;
+            color: white;
+            border: 3px solid #3a5213;
+            border-radius: 4px;
+            text-shadow: 1px 1px 0px #222;
+            box-shadow: 0px 4px 0px #2a3d0e;
+            transition: all 0.1s ease;
         }
         .menu-btn:active {
             transform: translateY(4px);
-            box-shadow: 0 1px #222;
+            box-shadow: 0px 0px 0px #000;
         }
 
-        /* 🕹️ スマホ用：ジョイスティックの土台 */
+        /* 👁️ りょうがきょり設定エリアの装飾 */
+        .setting-box {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            padding: 15px 25px;
+            border-radius: 8px;
+            margin: 15px;
+            text-align: center;
+            color: white;
+            font-family: sans-serif;
+        }
+        .setting-box label {
+            font-size: 16px;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 8px;
+            text-shadow: 1px 1px 2px #000;
+        }
+        .setting-box select {
+            padding: 8px 12px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 4px;
+            border: 2px solid #555;
+            background-color: #fff;
+            color: #333;
+            cursor: pointer;
+            width: 240px;
+            outline: none;
+        }
+
+        /* 🕹️ スマホ用バーチャルパッドのUI設定 */
+        #mobile-ui-container {
+            display: none; /* 初期は非表示 */
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* ゲーム画面のタッチを邪魔しない */
+            z-index: 10;
+        }
+
+        /* 左側：ジョイスティックの土台 */
         #mobile-joystick-base {
-            display: none;
-            position: fixed;
-            bottom: 50px; left: 50px; 
-            width: 100px; height: 100px;
-            background: rgba(255, 255, 255, 0.15);
-            border: 3px solid rgba(255, 255, 255, 0.4);
+            position: absolute;
+            bottom: 40px;
+            left: 40px;
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 4px solid rgba(255, 255, 255, 0.4);
             border-radius: 50%;
-            z-index: 1000;
-            touch-action: none;
+            pointer-events: auto; /* タッチを反応させる */
         }
 
-        /* ⚪ スマホ用：内側の丸 */
+        /* ジョイスティックのつまみ */
         #mobile-joystick-knob {
             position: absolute;
-            top: 25px; left: 25px; 
-            width: 50px; height: 50px;
-            background: rgba(255, 255, 255, 0.6);
+            top: 30px;
+            left: 30px;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.8);
             border-radius: 50%;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-            transition: transform 0.05s linear;
+            transition: transform 0.05s ease;
         }
 
-        /* 🦘 スマホ用：丸いジャンプボタン（新登場！） */
+        /* 右側：大ジャンプボタン */
         #mobile-jump-btn {
-            display: none;
-            position: fixed;
-            bottom: 65px; right: 60px;
-            width: 70px; height: 70px;
-            background: rgba(255, 255, 255, 0.25);
-            border: 3px solid rgba(255, 255, 255, 0.5);
+            position: absolute;
+            bottom: 50px;
+            right: 50px;
+            width: 75px;
+            height: 75px;
+            background: rgba(255, 255, 255, 0.3);
+            border: 4px solid rgba(255, 255, 255, 0.6);
             border-radius: 50%;
-            color: #fff;
-            font-size: 0.9rem;
+            color: white;
+            font-size: 16px;
             font-weight: bold;
-            text-align: center;
-            line-height: 64px; /* 文字を真ん中に */
-            z-index: 1000;
-            text-shadow: 1px 1px 3px #000;
-            box-shadow: 0 0 8px rgba(0,0,0,0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: auto;
+            text-shadow: 1px 1px 2px #000;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
         #mobile-jump-btn:active {
-            background: rgba(255, 255, 255, 0.5);
-            transform: scale(0.95);
+            background: rgba(255, 255, 255, 0.6);
         }
+
+        /* 🎯 画面中央の十字カーソル */
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 5;
+        }
+        #crosshair::before, #crosshair::after {
+            content: '';
+            position: absolute;
+            background: white;
+            opacity: 0.8;
+        }
+        #crosshair::before { top: 9px; left: 0; width: 20px; height: 2px; }
+        #crosshair::after { top: 0; left: 9px; width: 2px; height: 20px; }
     </style>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
 </head>
 <body>
 
+    <div id="crosshair"></div>
+
     <div id="menu-container">
         <h1>MY CRAFT GAME</h1>
 
-        <div class="settings-box">
-            <span style="display:block; margin-bottom: 8px; color: #aaa;">【 操作設定 】</span>
-            <label><input type="radio" name="device" value="pc" checked> 💻 パソコン (キーボード)</label>
-            <label><input type="radio" name="device" value="mobile"> 📱 スマホ (画面タッチ)</label>
+        <div class="setting-box">
+            <label for="render-distance-select">👁️ りょうがきょり (描画距離)</label>
+            <select id="render-distance-select" onchange="if(window.worldInstance) window.worldInstance.setRenderDistance(this.value);">
+                <option value="0">0 (自分の足元だけ - 超軽量)</option>
+                <option value="1" selected>1 (周辺1チャンク - 標準軽量)</option>
+                <option value="2">2 (周辺2チャンク - 普通)</option>
+                <option value="3">3 (周辺3チャンク - 遠くまで見える)</option>
+            </select>
         </div>
 
-        <button class="menu-btn" onclick="startGame('single')">シングルプレイ</button>
-        <button class="menu-btn" onclick="startGame('multi')">RenderAyudazeserver (マルチ)</button>
+        <button class="menu-btn" onclick="startSinglePlayer('pc')">💻 PCモードで遊ぶ</button>
+        <button class="menu-btn" onclick="startSinglePlayer('mobile')">📱 スマホモードで遊ぶ</button>
+        <button class="menu-btn" onclick="startMultiPlayer()" style="background:#1e5c80; border-color:#133a52; box-shadow: 0px 4px 0px #0e2a3d;">🌐 マルチプレイで遊ぶ</button>
     </div>
 
-    <div id="mobile-joystick-base">
-        <div id="mobile-joystick-knob"></div>
+    <div id="mobile-ui-container">
+        <div id="mobile-joystick-base">
+            <div id="mobile-joystick-knob"></div>
+        </div>
+        <div id="mobile-jump-btn">JUMP</div>
     </div>
 
-    <div id="mobile-jump-btn">JUMP</div>
-
-    <script src="js/world.js"></script>
     <script src="js/player.js"></script>
+    <script src="js/world.js"></script>
     <script src="game.js"></script>
     <script src="main.js"></script>
 
     <script>
-        window.gameMode = 'single'; 
+        // 全体のモードを管理する変数
         window.isMobileMode = false;
+        window.gameMode = 'single';
 
-        function startGame(mode) {
-            window.gameMode = mode;
+        // 💻 または 📱 シングルプレイ開始処理
+        function startSinglePlayer(mode) {
+            window.gameMode = 'single';
+            window.isMobileMode = (mode === 'mobile');
             
-            const selectedDevice = document.querySelector('input[name="device"]:checked').value;
-            if (selectedDevice === 'mobile') {
-                window.isMobileMode = true;
-                // スマホモードの時は操作パッドもジャンプボタンも両方出す！
-                document.getElementById('mobile-joystick-base').style.display = 'block';
-                document.getElementById('mobile-jump-btn').style.display = 'block';
+            // メニュー画面を消す
+            document.getElementById('menu-container').style.display = 'none';
+            
+            // スマホモードならボタン類を表示する
+            if (window.isMobileMode) {
+                document.getElementById('mobile-ui-container').style.display = 'block';
             }
 
-            document.getElementById('menu-container').style.display = 'none';
-            console.log(`🎮 モード: ${window.gameMode} / デバイス: ${selectedDevice} で起動完了！`);
-            
+            // game.js の初期化関数を呼び出してスタート！
             if (typeof window.initGame === 'function') {
                 window.initGame();
             }
         }
+
+        // 🌐 マルチプレイ開始処理
+        function startMultiPlayer() {
+            window.gameMode = 'multi';
+            // マルチプレイはデフォルトでPC操作とします
+            window.isMobileMode = false;
+
+            document.getElementById('menu-container').style.display = 'none';
+
+            if (typeof window.initGame === 'function') {
+                window.initGame();
+            }
+        }
+
+        // 📱 画面のサイズが変わったときに3Dの比率を直す処理
+        window.addEventListener('resize', () => {
+            if (window.camera && window.renderer) {
+                window.camera.aspect = window.innerWidth / window.innerHeight;
+                window.camera.updateProjectionMatrix();
+                window.renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        });
     </script>
 </body>
 </html>

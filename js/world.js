@@ -3,20 +3,21 @@ class World {
         this.scene = scene;
         this.blocks = [];
         this.chunkSize = 16;
-        this.renderDistance = 2; // 周辺2チャンクを描画
+        
+        // 👁️ 描画距離の初期設定（最初は1にしておきます）
+        this.renderDistance = 1; 
+        
         this.loadedChunks = new Set();
 
         // =================================================================
         // 🎨 1. 画像の読み込みとマイクラ風クッキリ設定
         // =================================================================
         const textureLoader = new THREE.TextureLoader();
-
         const textureGrassTop = textureLoader.load('img/grass_top.png');
         const textureGrassSide = textureLoader.load('img/grass_side.png');
         const textureDirt = textureLoader.load('img/dirt.png');
         const textureStone = textureLoader.load('img/stone.png');
 
-        // 💡 ドット絵がボヤけないようにする魔法の設定（クッキリ表示）
         [textureGrassTop, textureGrassSide, textureDirt, textureStone].forEach(tex => {
             tex.magFilter = THREE.NearestFilter;
             tex.minFilter = THREE.NearestFilter;
@@ -26,24 +27,32 @@ class World {
         // 📦 2. 各ブロックのマテリアル（見た目）作成
         // =================================================================
         this.grassMaterials = [
-            new THREE.MeshStandardMaterial({ map: textureGrassSide }), // 右
-            new THREE.MeshStandardMaterial({ map: textureGrassSide }), // 左
-            new THREE.MeshStandardMaterial({ map: textureGrassTop }),  // 上（緑の草）
-            new THREE.MeshStandardMaterial({ map: textureDirt }),      // 下（茶色の土）
-            new THREE.MeshStandardMaterial({ map: textureGrassSide }), // 前
-            new THREE.MeshStandardMaterial({ map: textureGrassSide })  // 後
+            new THREE.MeshStandardMaterial({ map: textureGrassSide }),
+            new THREE.MeshStandardMaterial({ map: textureGrassSide }),
+            new THREE.MeshStandardMaterial({ map: textureGrassTop }),
+            new THREE.MeshStandardMaterial({ map: textureDirt }),
+            new THREE.MeshStandardMaterial({ map: textureGrassSide }),
+            new THREE.MeshStandardMaterial({ map: textureGrassSide })
         ];
 
         this.dirtMaterial = new THREE.MeshStandardMaterial({ map: textureDirt });
         this.stoneMaterial = new THREE.MeshStandardMaterial({ map: textureStone });
-
         this.geometry = new THREE.BoxGeometry(1, 1, 1);
     }
 
-    // 🧱 【超重要！】指定したXYZ座標にブロックがあるか調べる関数
-    // これがなかったせいでプレイヤーが空中浮遊したりすり抜けていました！
+    // 🔄 【新機能！】描画距離を外から変更するための関数
+    setRenderDistance(distance) {
+        this.renderDistance = parseInt(distance) || 1;
+        console.log(`👁️ 描画距離が ${this.renderDistance} チャンクに変更されました`);
+        
+        // 距離が変わったら、新しい距離に合わせてチャンクの読み込みを一回リセット＆更新する
+        if (window.playerInstance) {
+            this.updateChunks(window.camera.position.x, window.camera.position.z);
+        }
+    }
+
+    // 🧱 指定したXYZ座標にブロックがあるか調べる関数
     getBlock(x, y, z) {
-        // 配置されている全てのブロックから、座標が一致するものを探す
         return this.blocks.find(block => 
             Math.floor(block.position.x) === Math.floor(x) &&
             Math.floor(block.position.y) === Math.floor(y) &&
@@ -78,7 +87,7 @@ class World {
         }
     }
 
-    // プレイヤーの周りの地形を自動生成する関数（山を作るアルゴリズム）
+    // プレイヤーの周りの地形を自動生成する関数
     updateChunks(playerX, playerZ) {
         const currentChunkX = Math.floor(playerX / this.chunkSize);
         const currentChunkZ = Math.floor(playerZ / this.chunkSize);
@@ -94,7 +103,7 @@ class World {
         }
     }
 
-    // 1つのチャンク（16×16のエリア）にデコボコした山を作る
+    // 1つのチャンクにデコボコした山を作る
     generateChunk(chunkX, chunkZ) {
         const startX = chunkX * this.chunkSize;
         const startZ = chunkZ * this.chunkSize;
@@ -104,13 +113,11 @@ class World {
                 const worldX = startX + x;
                 const worldZ = startZ + z;
 
-                // 🏔️ サイン・コサインを使ってなだらかな山を作る数式
                 const height = Math.floor(
                     Math.sin(worldX * 0.1) * Math.cos(worldZ * 0.1) * 4 + 
                     Math.sin(worldX * 0.05) * 4 + 8
                 );
 
-                // 表面から地中深くまでブロックを積み上げる
                 for (let y = 0; y <= height; y++) {
                     if (y === height) {
                         this.createBlock(worldX, y, worldZ, true, 'grass');
