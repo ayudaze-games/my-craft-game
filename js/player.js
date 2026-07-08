@@ -5,16 +5,16 @@ class Player {
         this.world = world;
         this.mode = mode;
 
-        // 🏃‍♂️ 移動スピードと物理演算
+        // 🏃‍♂️ 移動スピードと物理演算の準備
         this.velocity = new THREE.Vector3();
         this.direction = new THREE.Vector3();
         this.moveKeys = { forward: false, backward: false, left: false, right: false };
 
-// 🍏 物理演算パラメーター（ここをお好みで調整！）
-        this.gravity = 0.5;        // 👈 【重力】少し重くする（標準は 0.2 だったのを 0.3 に）
-        this.jumpStrength = 1.2;   // 👈 【ジャンプ力】これくらいがマイクラ風の心地いい高さ！（6.0 から 4.5 へ）
-        this.floorY = 10.5;
-        this.playerHeight = 1.6; // プレイヤーの目の高さ（マイクラ基準）
+        // 🍏 物理演算パラメーター（マイクラ風の黄金比率に微調整！）
+        this.gravity = 0.3;        // 重力（少し重みを出しました）
+        this.jumpStrength = 4.5;   // ジャンプ力（高すぎず低すぎずの快適な高さ）
+        this.floorY = 10.5;        // 最低限の奈落落ち防止用の床
+        this.playerHeight = 1.6;   // プレイヤーの目の高さ（マイクラ基準）
 
         // 🕹️ スマホ用変数
         this.joystickActive = false;
@@ -23,9 +23,10 @@ class Player {
         this.lookStart = { x: 0, y: 0 };
         this.isLooking = false;
 
-        // 初期スポーン位置（空中からスタート）
+        // 🛠️ 初期スポーン位置（空中からスタートしてストンと着地）
         this.camera.position.set(16, 15, 16);
 
+        // HTML要素の取得
         this.knob = document.getElementById('mobile-joystick-knob');
         this.base = document.getElementById('mobile-joystick-base');
         this.jumpBtn = document.getElementById('mobile-jump-btn');
@@ -34,19 +35,27 @@ class Player {
         this.onGround = false;
 
         if (this.mode === 'pc') {
+            // =============================================================
+            // 💻 PCモード
+            // =============================================================
             this.controls = new THREE.PointerLockControls(this.camera, this.domElement);
             this.domElement.addEventListener('click', () => { this.controls.lock(); });
             window.addEventListener('keydown', (e) => this.onKeyDown(e));
             window.addEventListener('keyup', (e) => this.onKeyUp(e));
         } else if (this.mode === 'mobile') {
+            // =============================================================
+            // 📱 スマホモード
+            // =============================================================
             this.camera.rotation.order = 'YXZ';
             window.addEventListener('touchstart', (e) => this.onTouchStart(e), { passive: false });
             window.addEventListener('touchmove', (e) => this.onTouchMove(e), { passive: false });
             window.addEventListener('touchend', (e) => this.onTouchEnd(e), { passive: false });
 
+            // 🦘 スマホJUMPボタンのタップ処理
             if (this.jumpBtn) {
                 this.jumpBtn.addEventListener('touchstart', (e) => {
-                    e.preventDefault(); e.stopPropagation();
+                    e.preventDefault(); 
+                    e.stopPropagation();
                     this.triggerJump();
                 }, { passive: false });
             }
@@ -55,9 +64,9 @@ class Player {
 
     // --- ジャンプの発動 ---
     triggerJump() {
-        // 🧱 本物の地面に立っている時だけジャンプを許可！
+        // 🧱 透明な地面ではなく、本物の地面に立っている時だけジャンプを許可！
         if (this.onGround) {
-            this.velocity.y = this.jumpStrength;
+            this.velocity.y = this.jumpStrength; // 上向きの速度を与える
             this.onGround = false; // ジャンプした瞬間は空中へ
             console.log("🦘 地面を蹴ってジャンプしました！");
         }
@@ -71,7 +80,7 @@ class Player {
             case 'KeyS': case 'ArrowDown': this.moveKeys.backward = true; break;
             case 'KeyA': case 'ArrowLeft': this.moveKeys.left = true; break;
             case 'KeyD': case 'ArrowRight': this.moveKeys.right = true; break;
-            case 'Space': this.triggerJump(); break; 
+            case 'Space': this.triggerJump(); break; // Spaceキーでジャンプ
         }
     }
     onKeyUp(e) {
@@ -157,27 +166,32 @@ class Player {
         this.velocity.y -= this.gravity; 
         this.camera.position.y += this.velocity.y * 0.1;
 
-        // 🧱 2. 【本物の当たり判定システム！】
-        // プレイヤーの今の足元の座標（整数）を計算する
+        // 🧱 2. 【透明な地面バグを修正した判定システム】
+        // プレイヤーの今の足元の座標（整数）を計算
         const playerX = Math.floor(this.camera.position.x);
         const playerZ = Math.floor(this.camera.position.z);
         
-        // あなたの worldInstance から、足元にブロックが存在するかチェックする
-        let targetFloorY = this.floorY; 
+        let targetFloorY = this.floorY; // 初期値（最低限の奈落落ち防止床: 10.5）
+
+        // あなたの world から、足元（Y=10）に本当にあるブロックの情報を取得する
         if (this.world && typeof this.world.getBlock === 'function') {
-            // 下方向のブロックを探す（簡易版：Y=10の初期地面）
-            const block = this.world.getBlock(playerX, 10, playerZ);
+            const blockY = 10; // 生成されている地面の高さ
+            const block = this.world.getBlock(playerX, blockY, playerZ);
+            
+            // ブロックが存在していて、かつ非表示（visible === false）じゃない場合だけ着地判定
             if (block && block.visible !== false) {
-                targetFloorY = 11.0; // ブロックの上（高さ11）を着地地点にする
+                targetFloorY = blockY + 1.0; // 10マスのブロックの上なので、高さ11.0ぴったりが地面！
+            } else {
+                targetFloorY = this.floorY;  // ブロックがなければ奈落（10.5）まで落ちる
             }
         }
 
         // 🍏 3. 着地判定
-        // プレイヤーの足元（カメラ位置 - 身長）が、地面より下に行こうとしたらガチッと止める
+        // プレイヤーの足元（カメラ位置 - 身長）が、実際の地面より下に行こうとしたらガチッと止める
         if (this.camera.position.y - this.playerHeight <= targetFloorY) {
-            this.camera.position.y = targetFloorY + this.playerHeight; // 地面の上に強制固定
+            this.camera.position.y = targetFloorY + this.playerHeight; // 地面の上の正しい位置にピタッと固定！
             this.velocity.y = 0; // 落下の力をゼロにする
-            this.onGround = true; // 「地面に立っている」状態にする（ジャンプ許可！）
+            this.onGround = true; // 地面に立っているのでジャンプ許可！
         } else {
             this.onGround = false; // 空中にいる
         }
