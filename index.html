@@ -110,7 +110,7 @@
             outline: none;
         }
 
-        /* 🕹️ スマホ用UI */
+        /* 🕹️ スマホ用バーチャルパッドのUI設定 */
         #mobile-ui-container {
             display: none;
             position: absolute;
@@ -121,6 +121,7 @@
             pointer-events: none;
             z-index: 10;
         }
+
         #mobile-joystick-base {
             position: absolute;
             bottom: 40px;
@@ -132,6 +133,7 @@
             border-radius: 50%;
             pointer-events: auto;
         }
+
         #mobile-joystick-knob {
             position: absolute;
             top: 30px;
@@ -142,6 +144,7 @@
             border-radius: 50%;
             transition: transform 0.05s ease;
         }
+
         #mobile-jump-btn {
             position: absolute;
             bottom: 50px;
@@ -161,7 +164,11 @@
             text-shadow: 1px 1px 2px #000;
             box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
+        #mobile-jump-btn:active {
+            background: rgba(255, 255, 255, 0.6);
+        }
 
+        /* 🎯 画面中央の十字カーソル */
         #crosshair {
             position: absolute;
             top: 50%;
@@ -221,6 +228,9 @@
         <div id="mobile-joystick-base">
             <div id="mobile-joystick-knob"></div>
         </div>
+        
+        <div id="mobile-view-btn" style="position: absolute; bottom: 140px; right: 50px; width: 75px; height: 45px; background: rgba(30, 92, 128, 0.5); border: 3px solid rgba(255, 255, 255, 0.6); border-radius: 6px; color: white; font-size: 13px; font-weight: bold; display: flex; justify-content: center; align-items: center; pointer-events: auto; text-shadow: 1px 1px 2px #000; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer;">視点変更</div>
+        
         <div id="mobile-jump-btn">JUMP</div>
     </div>
 
@@ -240,7 +250,6 @@
 
             const reader = new FileReader();
             reader.onload = function(e) {
-                // 画像を文字列（Base64形式）に変換して、main.jsで送信できるように記憶する
                 window.mySkinData = e.target.result;
                 document.getElementById('skin-status').innerText = "✅ スキンの登録完了！";
                 document.getElementById('skin-status').style.color = "#aae63c";
@@ -249,24 +258,28 @@
             reader.readAsDataURL(file);
         }
 
-        // ゲーム開始処理
+        // ゲーム開始・初期化をコントロールする関数
         function startGameMode(gMode, cMode) {
             window.gameMode = gMode;
             window.isMobileMode = (cMode === 'mobile');
             
+            // メニュー画面を非表示にする
             document.getElementById('menu-container').style.display = 'none';
             
+            // スマホ操作なら画面にパッドと視点変更ボタンを表示する
             if (window.isMobileMode) {
                 document.getElementById('mobile-ui-container').style.display = 'block';
             } else {
                 document.getElementById('mobile-ui-container').style.display = 'none';
             }
 
+            // game.js の初期化関数を呼び出してスタート！
             if (typeof window.initGame === 'function') {
                 window.initGame();
             }
         }
 
+        // 画面のサイズが変わったときに3Dの比率を直す処理
         window.addEventListener('resize', () => {
             if (window.camera && window.renderer) {
                 window.camera.aspect = window.innerWidth / window.innerHeight;
