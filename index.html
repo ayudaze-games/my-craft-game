@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
     <title>My Craft Game</title>
     <style>
-        /* 📱 スマホの画面長押しでの文字選択やメニューポップアップを禁止する */
         * {
             -webkit-touch-callout: none;
             -webkit-user-select: none;
@@ -78,7 +77,7 @@
             box-shadow: 0 1px #222;
         }
 
-        /* 🕹️ スマホ用：外側の大きな丸（コントローラーの土台） */
+        /* 🕹️ スマホ用：ジョイスティックの土台 */
         #mobile-joystick-base {
             display: none;
             position: fixed;
@@ -91,15 +90,38 @@
             touch-action: none;
         }
 
-        /* ⚪ スマホ用：内側の動く小さな丸（スティック本体） */
+        /* ⚪ スマホ用：内側の丸 */
         #mobile-joystick-knob {
             position: absolute;
-            top: 25px; left: 25px; /* 真ん中に配置 (100pxの枠に対して50pxの丸なので) */
+            top: 25px; left: 25px; 
             width: 50px; height: 50px;
             background: rgba(255, 255, 255, 0.6);
             border-radius: 50%;
             box-shadow: 0 0 10px rgba(0,0,0,0.5);
             transition: transform 0.05s linear;
+        }
+
+        /* 🦘 スマホ用：丸いジャンプボタン（新登場！） */
+        #mobile-jump-btn {
+            display: none;
+            position: fixed;
+            bottom: 65px; right: 60px;
+            width: 70px; height: 70px;
+            background: rgba(255, 255, 255, 0.25);
+            border: 3px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            color: #fff;
+            font-size: 0.9rem;
+            font-weight: bold;
+            text-align: center;
+            line-height: 64px; /* 文字を真ん中に */
+            z-index: 1000;
+            text-shadow: 1px 1px 3px #000;
+            box-shadow: 0 0 8px rgba(0,0,0,0.3);
+        }
+        #mobile-jump-btn:active {
+            background: rgba(255, 255, 255, 0.5);
+            transform: scale(0.95);
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -124,6 +146,8 @@
         <div id="mobile-joystick-knob"></div>
     </div>
 
+    <div id="mobile-jump-btn">JUMP</div>
+
     <script src="js/world.js"></script>
     <script src="js/player.js"></script>
     <script src="game.js"></script>
@@ -139,8 +163,9 @@
             const selectedDevice = document.querySelector('input[name="device"]:checked').value;
             if (selectedDevice === 'mobile') {
                 window.isMobileMode = true;
-                // スマホモードの時だけ丸いカーソルを表示する！
+                // スマホモードの時は操作パッドもジャンプボタンも両方出す！
                 document.getElementById('mobile-joystick-base').style.display = 'block';
+                document.getElementById('mobile-jump-btn').style.display = 'block';
             }
 
             document.getElementById('menu-container').style.display = 'none';
