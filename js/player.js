@@ -5,6 +5,9 @@ class Player {
         this.world = world;
         this.controlMode = controlMode; // 'pc' または 'mobile'
 
+        // 🧍 プレイヤーの「本当の頭の位置」をここで管理（これがストッパーになります！）
+        this.position = new THREE.Vector3(16, 12, 16);
+
         // 物理演算用のパラメータ
         this.velocity = new THREE.Vector3();
         this.direction = new THREE.Vector3();
@@ -22,15 +25,12 @@ class Player {
         this.thirdPersonDistance = 3.5;
         this.cameraRotation = new THREE.Vector2(0, 0); // X: 左右(Y軸回転), Y: 上下(X軸回転)
 
-        // 🧱 手元にある設置用ブロックの種類 ('grass', 'dirt', 'stone', 'log', 'leaves')
+        // 🧱 手元にある設置用ブロックの種類
         this.currentBlockType = 'stone';
 
-        // 👁️ レイキャスター（視線の先にあるブロックを検知するビーム）
+        // 👁️ レイキャスター
         this.raycaster = new THREE.Raycaster();
         this.mouse = new THREE.Vector2(0, 0); // 画面中央
-
-        // 初期位置
-        this.camera.position.set(16, 12, 16);
 
         if (this.controlMode === 'pc') {
             this.setupPCControls();
@@ -45,6 +45,9 @@ class Player {
                 this.toggleViewMode();
             }
         });
+
+        // カメラの初期同期
+        this.syncCamera();
     }
 
     // 💻 PC用の操作セットアップ
@@ -72,15 +75,13 @@ class Player {
             this.keys[e.code] = false;
         });
 
-        // 🧱 PCでのブロックの破壊(左クリック)・設置(右クリック)
+        // 🧱 PCでのブロックの破壊・設置
         window.addEventListener('mousedown', (e) => {
             if (!this.controls.isLocked) return;
 
             if (e.button === 0) {
-                // 左クリック：破壊
                 this.performBlockAction('destroy');
             } else if (e.button === 2) {
-                // 右クリック：設置
                 this.performBlockAction('place');
             }
         });
@@ -95,9 +96,7 @@ class Player {
         window.addEventListener('touchmove', (e) => {
             if (e.touches.length === 1) {
                 const touch = e.touches[0];
-                // ジョイスティック付近のタッチは視点移動から除外する
                 if (touch.clientX < 180 && touch.clientY > window.innerHeight - 180) return;
-                // 右下のジャンプ/設置ボタン付近も除外
                 if (touch.clientX > window.innerWidth - 150 && touch.clientY > window.innerHeight - 250) return;
 
                 if (this.touchStartX !== 0 && this.touchStartY !== 0) {
@@ -106,7 +105,6 @@ class Player {
 
                     this.cameraRotation.x -= deltaX * 0.005;
                     this.cameraRotation.y -= deltaY * 0.005;
-                    // 上下の視点制限（真上・真下を向けないようにする）
                     this.cameraRotation.y = Math.max(-Math.PI / 2.1, Math.min(Math.PI / 2.1, this.cameraRotation.y));
                 }
 
@@ -120,18 +118,16 @@ class Player {
             this.touchStartY = 0;
         });
 
-        // 🧱 スマホの画面「長押し」または「タップ」で破壊する
+        // スマホの画面タップで破壊
         let touchTimer;
         window.addEventListener('touchstart', (e) => {
             const touch = e.touches[0];
-            // UIボタンの上でのタッチは無視
             if (touch.clientX < 180 && touch.clientY > window.innerHeight - 180) return;
             if (touch.clientX > window.innerWidth - 150 && touch.clientY > window.innerHeight - 250) return;
 
             this.touchStartX = touch.clientX;
             this.touchStartY = touch.clientY;
 
-            // タップして0.25秒押し続けたら破壊を実行
             touchTimer = setTimeout(() => {
                 this.performBlockAction('destroy');
             }, 250);
@@ -141,25 +137,21 @@ class Player {
             clearTimeout(touchTimer);
         });
 
-        // ジョイスティックとボタンの挙動設定
         this.setupMobileUI();
     }
 
-    // スマホ用バーチャルパッド＆ジャンプ＆設置ボタンのイベント接続
+    // スマホ用UIイベント
     setupMobileUI() {
         const joystickBase = document.getElementById('mobile-joystick-base');
         const joystickKnob = document.getElementById('mobile-joystick-knob');
         const jumpBtn = document.getElementById('mobile-jump-btn');
         const viewBtn = document.getElementById('mobile-view-btn');
-        const buildBtn = document.getElementById('mobile-build-btn'); // 後でindex.htmlに追加します！
+        const buildBtn = document.getElementById('mobile-build-btn');
 
         this.moveJoystick = { x: 0, y: 0 };
 
         if (joystickBase) {
-            joystickBase.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-            });
-
+            joystickBase.addEventListener('touchstart', (e) => { e.preventDefault(); });
             joystickBase.addEventListener('touchmove', (e) => {
                 e.preventDefault();
                 const touch = e.touches[0];
@@ -170,7 +162,7 @@ class Player {
                 let dx = touch.clientX - centerX;
                 let dy = touch.clientY - centerY;
                 const dist = Math.sqrt(dx * dx + dy * dy);
-                const maxDist = 35; // ツマミの最大可動範囲
+                const maxDist = 35;
 
                 if (dist > maxDist) {
                     dx = (dx / dist) * maxDist;
@@ -179,7 +171,7 @@ class Player {
 
                 joystickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
                 this.moveJoystick.x = dx / maxDist;
-                this.moveJoystick.y = -dy / maxDist; // Three.jsのZ軸方向と合わせるために反転
+                this.moveJoystick.y = -dy / maxDist;
             });
 
             joystickBase.addEventListener('touchend', (e) => {
@@ -198,7 +190,6 @@ class Player {
             });
         }
 
-        // スマホ用：視点切り替えボタン
         if (viewBtn) {
             viewBtn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
@@ -206,7 +197,6 @@ class Player {
             });
         }
 
-        // スマホ用：ブロック設置ボタン（タップで見ている場所に設置）
         if (buildBtn) {
             buildBtn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
@@ -215,37 +205,28 @@ class Player {
         }
     }
 
-    // 🧱 視線の先のブロックを「破壊」または「設置」する神ロジック
+    // 🧱 ブロックを「破壊」または「設置」する
     performBlockAction(action) {
-        // 画面の中央からまっすぐレイ（ビーム）を飛ばす
         this.raycaster.setFromCamera(this.mouse, this.camera);
-
-        // 世界にあるすべてのブロックをターゲットにする
         const intersects = this.raycaster.intersectObjects(this.world.blocks);
 
-        // 4マス以内の距離にある一番手前のブロックだけを対象にする（マイクラの届く範囲）
         if (intersects.length > 0 && intersects[0].distance < 4.5) {
             const hitBlock = intersects[0].object;
 
             if (action === 'destroy') {
-                // 🔥 破壊：ビームが当たったブロックを消し去る！
                 this.world.removeBlock(hitBlock);
                 console.log("ブロックを破壊しました！");
-
             } else if (action === 'place') {
-                // 🏗️ 設置：当たった面の「外側」の座標を求めて、そこに新しいブロックを置く！
-                const faceNormal = intersects[0].face.normal; // 当たった面の向き（上、下、左、右など）
+                const faceNormal = intersects[0].face.normal;
                 const currentPos = hitBlock.position;
 
-                // 当たった面の方向に +1 マスズラした位置が、設置する座標！
                 const targetX = Math.round(currentPos.x + faceNormal.x);
                 const targetY = Math.round(currentPos.y + faceNormal.y);
                 const targetZ = Math.round(currentPos.z + faceNormal.z);
 
-                // そこにすでにプレイヤー自身が立っていないか簡易チェック（埋まり防止）
-                const playerFootX = Math.round(this.camera.position.x);
-                const playerFootY = Math.round(this.camera.position.y - this.playerHeight);
-                const playerFootZ = Math.round(this.camera.position.z);
+                const playerFootX = Math.round(this.position.x);
+                const playerFootY = Math.round(this.position.y - this.playerHeight);
+                const playerFootZ = Math.round(this.position.z);
 
                 if (targetX === playerFootX && targetZ === playerFootZ && 
                     (targetY === playerFootY || targetY === playerFootY + 1)) {
@@ -253,7 +234,6 @@ class Player {
                     return;
                 }
 
-                // ブロックを配置する！
                 this.world.createBlock(targetX, targetY, targetZ, false, this.currentBlockType);
                 console.log(`ブロックを設置しました: ${this.currentBlockType}`);
             }
@@ -267,10 +247,8 @@ class Player {
 
         const crosshair = document.getElementById('crosshair');
         if (this.viewMode === 0) {
-            // 一人称なら十字カーソルを表示
             if (crosshair) crosshair.style.display = 'block';
         } else {
-            // 三人称なら十字カーソルを非表示
             if (crosshair) crosshair.style.display = 'none';
         }
     }
@@ -281,20 +259,20 @@ class Player {
         } else {
             this.updateMobile();
         }
+        
+        // 🚀 移動後にカメラの位置を「正しく」配置（一人称/三人称のカメラ同期）
+        this.syncCamera();
     }
 
     // 💻 PCモードの移動＆衝突判定
     updatePC() {
         if (!this.controls.isLocked) return;
 
-        // キーボード入力による移動方向の計算
         this.direction.z = Number(this.keys['KeyW']) - Number(this.keys['KeyS']);
         this.direction.x = Number(this.keys['KeyD']) - Number(this.keys['KeyA']);
         this.direction.normalize();
 
         const moveVector = new THREE.Vector3();
-        
-        // 視点に関わらず、カメラの水平方向の向きに合わせて移動
         const camDirection = new THREE.Vector3();
         this.camera.getWorldDirection(camDirection);
         camDirection.y = 0;
@@ -307,54 +285,44 @@ class Player {
         if (this.keys['KeyD']) moveVector.add(camSide);
         if (this.keys['KeyA']) moveVector.sub(camSide);
 
-        moveVector.normalize().multiplyScalar(this.speed * 0.016); // 1フレーム(約16ms)あたりの移動距離
+        moveVector.normalize().multiplyScalar(this.speed * 0.016);
 
-        // 物理演算（重力と落下）
         this.velocity.y -= this.gravity * 0.016;
 
-        // 次のフレームでの仮のプレイヤー位置
-        const nextPos = this.camera.position.clone().add(moveVector);
+        // 【ストッパー】カメラではなく「this.position」を基準に計算します
+        const nextPos = this.position.clone().add(moveVector);
         nextPos.y += this.velocity.y * 0.016;
 
-        // 地面（ブロック）との衝突判定
         let feetY = nextPos.y - this.playerHeight;
         let blockBelow = this.world.getBlock(nextPos.x, feetY, nextPos.z);
 
         if (blockBelow && this.velocity.y <= 0) {
-            this.camera.position.y = Math.floor(feetY) + 1 + this.playerHeight;
+            this.position.y = Math.floor(feetY) + 1 + this.playerHeight;
             this.velocity.y = 0;
             this.isGrounded = true;
 
-            // ジャンプ処理
             if (this.keys['Space']) {
                 this.velocity.y = this.jumpForce;
                 this.isGrounded = false;
             }
         } else {
-            this.camera.position.y += this.velocity.y * 0.016;
+            this.position.y += this.velocity.y * 0.016;
             this.isGrounded = false;
         }
 
-        // 壁との衝突判定（簡易版：歩ける場所だけ移動）
-        const testHeight = this.camera.position.y - this.playerHeight + 0.5;
+        const testHeight = this.position.y - this.playerHeight + 0.5;
         const blockInFront = this.world.getBlock(nextPos.x, testHeight, nextPos.z);
         if (!blockInFront) {
-            this.camera.position.x = nextPos.x;
-            this.camera.position.z = nextPos.z;
-        }
-
-        // 三人称視点(F5)のカメラ追従処理
-        if (this.viewMode === 1) {
-            this.applyThirdPersonCamera();
+            this.position.x = nextPos.x;
+            this.position.z = nextPos.z;
         }
     }
 
     // 📱 スマホモードの移動＆衝突判定
     updateMobile() {
-        // ジョイスティック入力による移動ベクトルの計算
         const moveVector = new THREE.Vector3();
         
-        // スマホではドラッグで変化した cameraRotation に基づいてカメラの向きを設定する
+        // スマホ用の回転適用
         const targetRotation = new THREE.Euler(this.cameraRotation.y, this.cameraRotation.x, 0, 'YXZ');
         this.camera.quaternion.setFromEuler(targetRotation);
 
@@ -368,51 +336,46 @@ class Player {
         moveVector.addScaledVector(camSide, this.moveJoystick.x);
         moveVector.normalize().multiplyScalar(this.speed * 0.016);
 
-        // 物理演算（重力と落下）
         this.velocity.y -= this.gravity * 0.016;
 
-        // 次のフレームの仮位置
-        const nextPos = this.camera.position.clone().add(moveVector);
+        // 【ストッパー】カメラではなく「this.position」を基準に計算します
+        const nextPos = this.position.clone().add(moveVector);
         nextPos.y += this.velocity.y * 0.016;
 
-        // 地面判定
         let feetY = nextPos.y - this.playerHeight;
         let blockBelow = this.world.getBlock(nextPos.x, feetY, nextPos.z);
 
         if (blockBelow && this.velocity.y <= 0) {
-            this.camera.position.y = Math.floor(feetY) + 1 + this.playerHeight;
+            this.position.y = Math.floor(feetY) + 1 + this.playerHeight;
             this.velocity.y = 0;
             this.isGrounded = true;
         } else {
-            this.camera.position.y += this.velocity.y * 0.016;
+            this.position.y += this.velocity.y * 0.016;
             this.isGrounded = false;
         }
 
-        // 壁判定
-        const testHeight = this.camera.position.y - this.playerHeight + 0.5;
+        const testHeight = this.position.y - this.playerHeight + 0.5;
         const blockInFront = this.world.getBlock(nextPos.x, testHeight, nextPos.z);
         if (!blockInFront) {
-            this.camera.position.x = nextPos.x;
-            this.camera.position.z = nextPos.z;
-        }
-
-        // 三人称視点(F5)のカメラ追従処理
-        if (this.viewMode === 1) {
-            this.applyThirdPersonCamera();
+            this.position.x = nextPos.x;
+            this.position.z = nextPos.z;
         }
     }
 
-    // 三人称カメラの座標計算＆配置
-    applyThirdPersonCamera() {
-        const targetPos = this.camera.position.clone();
-        
-        // カメラの向いている方向の「真後ろ」にカメラを引く
-        const backDirection = new THREE.Vector3(0, 0, 1);
-        backDirection.applyQuaternion(this.camera.quaternion);
-        backDirection.y = 0.2; // 少し斜め上から見下ろす感じにしてリアルにする
-        backDirection.normalize();
+    // 🔒 カメラを「本当の位置」に同期させる、超大事なストッパー関数！
+    syncCamera() {
+        // まずカメラを「本来の一人称（頭の位置）」にピタッと置く
+        this.camera.position.copy(this.position);
 
-        const cameraOffset = backDirection.multiplyScalar(this.thirdPersonDistance);
-        this.camera.position.add(cameraOffset);
+        if (this.viewMode === 1) {
+            // 三人称モードなら、そこから「1回だけ」後ろにカメラを引く！
+            const backDirection = new THREE.Vector3(0, 0, 1);
+            backDirection.applyQuaternion(this.camera.quaternion);
+            backDirection.y = 0.2; // 少し見下ろす
+            backDirection.normalize();
+
+            const cameraOffset = backDirection.multiplyScalar(this.thirdPersonDistance);
+            this.camera.position.add(cameraOffset);
+        }
     }
 }
