@@ -145,17 +145,16 @@
             transition: transform 0.05s ease;
         }
 
-        #mobile-jump-btn {
+        /* 右側のアクションボタン共通スタイル */
+        .mobile-action-btn {
             position: absolute;
-            bottom: 50px;
-            right: 50px;
             width: 75px;
             height: 75px;
             background: rgba(255, 255, 255, 0.3);
             border: 4px solid rgba(255, 255, 255, 0.6);
             border-radius: 50%;
             color: white;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: bold;
             display: flex;
             justify-content: center;
@@ -163,9 +162,31 @@
             pointer-events: auto;
             text-shadow: 1px 1px 2px #000;
             box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            cursor: pointer;
         }
-        #mobile-jump-btn:active {
+        .mobile-action-btn:active {
             background: rgba(255, 255, 255, 0.6);
+        }
+
+        #mobile-jump-btn {
+            bottom: 40px;
+            right: 40px;
+        }
+
+        #mobile-build-btn {
+            bottom: 40px;
+            right: 130px;
+            background: rgba(92, 128, 30, 0.5); /* ちょっと緑色 */
+        }
+
+        #mobile-view-btn {
+            bottom: 130px;
+            right: 40px;
+            width: 75px;
+            height: 45px;
+            border-radius: 6px;
+            background: rgba(30, 92, 128, 0.5); /* 青色 */
+            font-size: 12px;
         }
 
         /* 🎯 画面中央の十字カーソル */
@@ -187,6 +208,21 @@
         }
         #crosshair::before { top: 9px; left: 0; width: 20px; height: 2px; }
         #crosshair::after { top: 0; left: 9px; width: 2px; height: 20px; }
+
+        /* 🏷️ 左下のバージョン情報テキスト */
+        #version-info {
+            position: absolute;
+            bottom: 10px;
+            left: 15px;
+            color: rgba(255, 255, 255, 0.7);
+            font-family: 'Consolas', 'Courier New', monospace, sans-serif;
+            font-size: 12px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px #000;
+            pointer-events: none;
+            z-index: 20;
+            transition: bottom 0.2s ease;
+        }
     </style>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -195,6 +231,8 @@
 <body>
 
     <div id="crosshair"></div>
+
+    <div id="version-info">v1.1.0 (Tree & Build Update)</div>
 
     <div id="menu-container">
         <h1>MY CRAFT GAME</h1>
@@ -209,8 +247,19 @@
             </select>
         </div>
 
+        <div class="setting-box">
+            <label for="block-select">🧱 設置するブロックの種類</label>
+            <select id="block-select" onchange="if(window.playerInstance) window.playerInstance.currentBlockType = this.value;">
+                <option value="grass">草ブロック (Grass)</option>
+                <option value="dirt">土ブロック (Dirt)</option>
+                <option value="stone" selected>石ブロック (Stone)</option>
+                <option value="log">原木 (Log)</option>
+                <option value="leaves">葉っぱ (Leaves)</option>
+            </select>
+        </div>
+
         <div class="setting-box" style="border-color: #5c801e;">
-            <label for="skin-upload-input" style="color: #aae63c;">🎭 スキン変更 (お顔の画像)</label>
+            <label for="skin-upload-input" style="color: #aae63c;">🎭 スキン変更 (お顔 of 画像)</label>
             <input type="file" id="skin-upload-input" accept="image/*" onchange="handleSkinUpload(this)">
             <div id="skin-status" style="font-size: 11px; margin-top: 5px; color: #ccc;">画像を選ぶと顔が変わるよ！</div>
         </div>
@@ -229,9 +278,11 @@
             <div id="mobile-joystick-knob"></div>
         </div>
         
-        <div id="mobile-view-btn" style="position: absolute; bottom: 140px; right: 50px; width: 75px; height: 45px; background: rgba(30, 92, 128, 0.5); border: 3px solid rgba(255, 255, 255, 0.6); border-radius: 6px; color: white; font-size: 13px; font-weight: bold; display: flex; justify-content: center; align-items: center; pointer-events: auto; text-shadow: 1px 1px 2px #000; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer;">視点変更</div>
+        <div id="mobile-view-btn" class="mobile-action-btn">視点変更</div>
+
+        <div id="mobile-build-btn" class="mobile-action-btn">BUILD</div>
         
-        <div id="mobile-jump-btn">JUMP</div>
+        <div id="mobile-jump-btn" class="mobile-action-btn">JUMP</div>
     </div>
 
     <script src="js/player.js"></script>
@@ -266,17 +317,28 @@
             // メニュー画面を非表示にする
             document.getElementById('menu-container').style.display = 'none';
             
-            // スマホ操作なら画面にパッドと視点変更ボタンを表示する
+            const versionInfo = document.getElementById('version-info');
+
+            // スマホ操作なら画面にパッドと設置ボタンを表示し、バージョン情報を少し上げる
             if (window.isMobileMode) {
                 document.getElementById('mobile-ui-container').style.display = 'block';
+                if (versionInfo) versionInfo.style.bottom = '150px'; // ジョイスティックに被らない位置に逃がす
             } else {
                 document.getElementById('mobile-ui-container').style.display = 'none';
+                if (versionInfo) versionInfo.style.bottom = '10px'; // PCは左下ぴったり
             }
 
             // game.js の初期化関数を呼び出してスタート！
             if (typeof window.initGame === 'function') {
                 window.initGame();
             }
+
+            // プレイヤー初期化後にセレクトボックスの値を適用させる
+            setTimeout(() => {
+                if (window.playerInstance) {
+                    window.playerInstance.currentBlockType = document.getElementById('block-select').value;
+                }
+            }, 100);
         }
 
         // 画面のサイズが変わったときに3Dの比率を直す処理

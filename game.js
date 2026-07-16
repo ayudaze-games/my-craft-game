@@ -83,3 +83,9 @@ function tick() {
     window.renderer.render(window.scene, window.camera);
     requestAnimationFrame(tick);
 }
+// 右クリックメニュー（コンテキストメニュー）をゲーム中に表示させないための魔除け
+window.addEventListener('contextmenu', (e) => {
+    if (window.playerInstance && window.playerInstance.controlMode === 'pc') {
+        e.preventDefault();
+    }
+});
